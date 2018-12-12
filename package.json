@@ -2,7 +2,7 @@
   "name": "dan-test",
   "version": "0.1.0",
   "private": true,
-  "homepage" : "https://danielarnett.github.io/360GL/docs",
+  "homepage": "https://danielarnett.github.io/360GL",
   "dependencies": {
     "@material-ui/core": "^3.6.2",
     "@material-ui/lab": "^3.0.0-alpha.25",
@@ -15,6 +15,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "deploy": "gh-pages -d build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -26,5 +27,8 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "devDependencies": {
+    "gh-pages": "^2.0.1"
+  }
 }
