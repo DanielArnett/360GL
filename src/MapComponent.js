@@ -104,7 +104,7 @@ class MapComponent extends Component {
   render() {
     const { contrast, saturation, brightness } = this.props
     return (
-      <Surface width={480} height={300}>
+      <Surface width={1200} height={600}>
         <Node
           shader={shaders.Saturate}
           uniforms={{ contrast, saturation, brightness, InputTexture: 'earth.jpg' }}
