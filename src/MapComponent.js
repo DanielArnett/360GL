@@ -107,7 +107,7 @@ class MapComponent extends Component {
       <Surface width={480} height={300}>
         <Node
           shader={shaders.Saturate}
-          uniforms={{ contrast, saturation, brightness, InputTexture: 'earth_clouds.jpg' }}
+          uniforms={{ contrast, saturation, brightness, InputTexture: 'earth.jpg' }}
         />
       </Surface>
     )
