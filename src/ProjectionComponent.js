@@ -198,8 +198,8 @@ const shaders = Shaders.create({
 
       void main()
       {
-          int inputProjection = FLAT;
-          int outputProjection = FLAT;
+          int inputProjection = EQUI;
+          int outputProjection = EQUI;
           vec3 InputRotation = vec3(pitch, roll, yaw);
           // Given some pixel (uv), find the latitude and longitude of that pixel
           vec2 latLon;
@@ -256,7 +256,7 @@ class ProjectionComponent extends Component {
       <Surface width={1200} height={600}>
         <Node
           shader={shaders.Saturate}
-          uniforms={{ pitch, roll, yaw, InputTexture: 'cats.jpg' }}
+          uniforms={{ pitch, roll, yaw, InputTexture: 'earth_8k.jpg' }}
         />
       </Surface>
     )
