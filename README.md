@@ -1,5 +1,24 @@
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Installation
+
+Below are instructions for installing to Ubuntu 16.04
+
+1. [Install nodejs](`https://github.com/nodesource/distributions#installation-instructions`)
+
+2. Clone this repository and enter the directory.
+
+### `git clone https://github.com/DanielArnett/360GL.git; cd ./360GL`
+
+3. Install dependencies
+
+### `npm install`
+
+4. Now the project should be ready to build.
+
+### `npm run build`
+
+
 ## Available Scripts
 
 In the project directory, you can run:

@@ -1,50 +1,50 @@
 import React, { Component } from 'react';
 import Slider from '@material-ui/lab/Slider';
 import './App.css'
-import MapComponent from './MapComponent'
+import ProjectionComponent from './ProjectionComponent'
 
 class App extends Component {
   state = {
-    contrast: 1,
-    saturation: 1,
-    brightness: 1,
+    pitch: 1,
+    roll: 1,
+    yaw: 1,
   }
 
-  handleContrastChange = (event, value) => {
-    this.setState({ contrast: value/50 });
+  handlePitchChange = (event, value) => {
+    this.setState({ pitch: value/50 });
   }
 
-  handleSaturationChange = (event, value) => {
-    this.setState({ saturation: value/50 });
+  handleRollChange = (event, value) => {
+    this.setState({ roll: value/50 });
   }
 
-  handleBrightnessChange = (event, value) => {
-    this.setState({ brightness: value/50 });
+  handleYawChange = (event, value) => {
+    this.setState({ yaw: value/50 });
   }
 
   render() {
-    const { contrast, saturation, brightness } = this.state
+    const { pitch, roll, yaw } = this.state
     return (
       <div className='App-container'>
         <div className='App-slider'>
-          <p>Contrast</p>
+          <p>Pitch</p>
           <Slider
-            value={contrast*50}
-            onChange={this.handleContrastChange}
+            value={pitch*50}
+            onChange={this.handlePitchChange}
           />
-          <p>Saturation</p>
+          <p>Roll</p>
           <Slider
-            value={saturation*50}
-            onChange={this.handleSaturationChange}
+            value={roll*50}
+            onChange={this.handleRollChange}
           />
-          <p>Brightness</p>
+          <p>Yaw</p>
           <Slider
-            value={brightness*50}
-            onChange={this.handleBrightnessChange}
+            value={yaw*50}
+            onChange={this.handleYawChange}
           />
         </div>
-        <div className='App-map'>
-          <MapComponent contrast={contrast} saturation={saturation} brightness={brightness}/>
+        <div className='App-Projection'>
+          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw}/>
         </div>
       </div>
     );
