@@ -5,17 +5,20 @@ import { Surface } from "gl-react-dom";
 const shaders = Shaders.create({
   Saturate: {
     frag: GLSL`
+    // TODO turn this into its own .frag file.
       precision highp float;
       float PI = 3.14159265359;
       vec2 SET_TO_TRANSPARENT = vec2(-1.0, -1.0);
       vec4 TRANSPARENT_PIXEL = vec4(0.0, 0.0, 0.0, 0.0);
       uniform sampler2D InputTexture;
-      uniform float pitch, roll, yaw;
+      uniform float pitch, roll, yaw, fov;
+      uniform int inputProjection, outputProjection, width, height;
       varying vec2 uv;
       bool isTransparent = false;
       const int EQUI = 0;
       const int FISHEYE = 1;
       const int FLAT = 2;
+      const int SPHERE = 3;
 
       // uniform vec3 InputRotation;
       // A transformation matrix rotating about the x axis by th degrees.
@@ -69,16 +72,16 @@ const shaders = Shaders.create({
       }
 
       // Convert pixel coordinates from an Equirectangular image into latitude/longitude coordinates.
-      vec2 EquiUvToLatLon(vec2 uv)
+      vec2 EquiUvToLatLon(vec2 local_uv)
       {
-          return vec2(uv.y * PI - PI/2.0,
-                      uv.x * 2.0*PI - PI);
+          return vec2(local_uv.y * PI - PI/2.0,
+                      local_uv.x * 2.0*PI - PI);
       }
 
       // Convert  pixel coordinates from an Fisheye image into latitude/longitude coordinates.
-      vec2 FisheyeUvToLatLon(vec2 uv)
+      vec2 FisheyeUvToLatLon(vec2 local_uv, float fovInRadians)
       {
-        vec2 pos = 2.0 * uv - 1.0;
+        vec2 pos = 2.0 * local_uv - 1.0;
         float r = distance(vec2(0.0, 0.0), pos);
         // Don't bother with pixels outside of the fisheye circle
         if (1.0 < r) {
@@ -86,7 +89,7 @@ const shaders = Shaders.create({
           return SET_TO_TRANSPARENT;
         }
         vec2 latLon;
-        latLon.x = (1.0 - r)*(PI / 2.0);
+        latLon.x = (1.0 - r)/(2.0/PI);
         // Calculate longitude
         latLon.y = PI + atan(-pos.x, pos.y);
           
@@ -98,19 +101,20 @@ const shaders = Shaders.create({
         latLon = pointToLatLon(point);
         return latLon;
       }
-      
-      vec2 flatImageUvToLatLon(vec2 uv)
+
+      vec2 sphericalUvToLatLon(vec2 local_uv)
       {
-        float aspectRatio = 1.0;
+          // Return a isTransparent pixel
+          isTransparent = true;
+          return SET_TO_TRANSPARENT;
+      }
+      
+      vec2 flatImageUvToLatLon(vec2 local_uv)
+      {
         // Position of the source pixel in uv coordinates in the range [-1,1]
-        vec2 pos = 2.0 * uv - 1.0;
-        float fieldOfView = PI/2.0;
-        vec2 imagePlaneDimensions = vec2(tan(fieldOfView / 2.0) * 2.0, (tan(fieldOfView / 2.0) * 2.0) / aspectRatio);
-        
-        // Position of the source pixel on the image plane
-        pos *= imagePlaneDimensions;
-        vec3 point = vec3(pos.x, 1.0, pos.y);
-        // point = rotatePoint(point, vec3(-PI/2.0, 0.0, 0.0));
+        vec2 pos = 2.0 * local_uv - 1.0;
+        float aspectRatio = float(width)/float(height);
+        vec3 point = vec3(pos.x*aspectRatio, 1.0, pos.y);
         return pointToLatLon(point);
       }
 
@@ -131,10 +135,17 @@ const shaders = Shaders.create({
       // Convert latitude, longitude to x, y pixel coordinates on an equirectangular image.
       vec2 latLonToEquiUv(vec2 latLon)
       {
-          vec2 uv;
-          uv.x = (latLon.y + PI)/(2.0*PI);
-          uv.y = (latLon.x + PI/2.0)/PI;
-          return uv;
+          vec2 local_uv;
+          local_uv.x = (latLon.y + PI)/(2.0*PI);
+          local_uv.y = (latLon.x + PI/2.0)/PI;
+
+          // Set to transparent if out of bounds
+          if (local_uv.x < -1.0 || local_uv.y < -1.0 || local_uv.x > 1.0 || local_uv.y > 1.0) {
+            // Return a isTransparent pixel
+            isTransparent = true;
+            return SET_TO_TRANSPARENT;
+          }
+          return local_uv;
       }
       
       // Convert latitude, longitude to x, y pixel coordinates on the source fisheye image.
@@ -150,12 +161,6 @@ const shaders = Shaders.create({
         vec2 sourcePixel;
         // Get the source pixel radius from center
         r = 1.0 - latLon.x/(PI / 2.0);
-        // Don't bother with source pixels outside of the fisheye circle
-        if (1.0 < r) {
-          // Return a isTransparent pixel
-          isTransparent = true;
-          return SET_TO_TRANSPARENT;
-        }
         phi = atan(-point.y, point.x);
         
         sourcePixel.x = r * cos(phi);
@@ -163,6 +168,12 @@ const shaders = Shaders.create({
         // Normalize the output pixel to be in the range [0,1]
         sourcePixel += 1.0;
         sourcePixel /= 2.0;
+        // Don't bother with source pixels outside of the fisheye circle
+        if (1.0 < r || sourcePixel.x < 0.0 || sourcePixel.y < 0.0 || sourcePixel.x > 1.0 || sourcePixel.y > 1.0) {
+          // Return a isTransparent pixel
+          isTransparent = true;
+          return SET_TO_TRANSPARENT;
+        }
         return sourcePixel;
       }
       
@@ -176,6 +187,7 @@ const shaders = Shaders.create({
       {
         vec3 point = rotatePoint(latLonToPoint(latLon), vec3(-PI/2.0, 0.0, 0.0));
         latLon = pointToLatLon(point);
+        float aspectRatio = float(width)/float(height);
 
         vec2 xyOnImagePlane;
         vec3 p;
@@ -186,6 +198,7 @@ const shaders = Shaders.create({
         }
         // Derive a 3D point on the plane which correlates with the latitude and longitude in the fisheye image.
         p = flatLatLonToPoint(latLon);
+        p.x /= aspectRatio;
         // Position of the source pixel in the source image in the range [-1,1]
         xyOnImagePlane = p.xy / 2.0 + 0.5;
         if (outOfFlatBounds(xyOnImagePlane, 0.0, 1.0)) 
@@ -195,54 +208,85 @@ const shaders = Shaders.create({
         }
         return xyOnImagePlane;
       }
-
       void main()
       {
-          int inputProjection = EQUI;
-          int outputProjection = EQUI;
-          vec3 InputRotation = vec3(pitch, roll, yaw);
-          // Given some pixel (uv), find the latitude and longitude of that pixel
-          vec2 latLon;
-          if (outputProjection == EQUI)
-            latLon = EquiUvToLatLon(uv);
-          else if(outputProjection == FISHEYE)
-            latLon = FisheyeUvToLatLon(uv);
-          else if (outputProjection == FLAT)
-            latLon = flatImageUvToLatLon(uv);
-
-          // If a pixel is out of bounds, set it to be transparent
-          if (isTransparent)
+        vec3 InputRotation = vec3(pitch, roll, yaw);
+        vec4 fragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        vec4 centerFragColor = vec4(0.0, 0.0, 0.0, 0.0);
+        float fovInRadians = fov * 2.0 * PI;
+        // Level Of Detail: how fast should this run?
+        // Set LOD to 0 to run fast, set to two to blur the image, reducing jagged edges
+        const int LOD = 1;
+        //TODO Make Antialiasing a little smarter than this.
+        for(int i = -LOD; i <= LOD; i++)
+        {
+          for(int j = -LOD; j <= LOD; j++)
           {
-            gl_FragColor = TRANSPARENT_PIXEL;
-            return;
+            isTransparent = false;
+            vec2 uv_aa = uv + vec2(i, j)/vec2(width, height);
+            // Given some pixel (uv), find the latitude and longitude of that pixel
+            vec2 latLon;
+            if (outputProjection == EQUI)
+              latLon = EquiUvToLatLon(uv_aa);
+            else if(outputProjection == FISHEYE)
+              latLon = FisheyeUvToLatLon(uv_aa, fovInRadians);
+            else if (outputProjection == FLAT)
+              latLon = flatImageUvToLatLon(uv_aa);
+            else if (outputProjection == SPHERE)
+              latLon = sphericalUvToLatLon(uv_aa);
+            // If a pixel is out of bounds, set it to be transparent
+            if (isTransparent)
+            {
+              continue;
+            }
+            // Create a point on the unit-sphere from the calculated latitude and longitude
+            // This sphere uses a right-handed coordinate system
+              // X increases from left to right [-1 to 1]
+              // Y increases from back to front [-1 to 1]
+              // Z increases from bottom to top [-1 to 1]
+            vec3 point = latLonToPoint(latLon);
+            // Rotate the point based on the user input in radians
+            point = rotatePoint(point, InputRotation.rgb * PI);
+            // Convert back to latitude and longitude
+            latLon = pointToLatLon(point);
+            
+            // Convert back to the normalized pixel coordinate
+            vec2 sourcePixel;
+            if (inputProjection == EQUI)
+              sourcePixel = latLonToEquiUv(latLon);
+            else if (inputProjection == FISHEYE)
+              sourcePixel = pointToFisheyeUv(point);
+            else if (inputProjection == FLAT)
+              sourcePixel = latLonToFlatUv(latLon);
+            // If a pixel is out of bounds, set it to be transparent
+            if (isTransparent)
+            {
+              continue;
+            }
+            // Set the color of the destination pixel to the color of the source pixel
+            vec4 color = texture2D(InputTexture, sourcePixel);
+            fragColor += color;
+            if (i == 0 && j == 0)
+            {
+              // This is the aliased pixel. If we didn't do antialiasing this is the pixel we'd get.
+              centerFragColor = color;
+            }
           }
-          // Create a point on the unit-sphere from the calculated latitude and longitude
-          // This sphere uses a right-handed coordinate system
-            // X increases from left to right [-1 to 1]
-            // Y increases from back to front [-1 to 1]
-            // Z increases from bottom to top [-1 to 1]
-          vec3 point = latLonToPoint(latLon);
-          // Rotate the point based on the user input in radians
-          point = rotatePoint(point, InputRotation.rgb * PI);
-          // Convert back to latitude and longitude
-          latLon = pointToLatLon(point);
+        }
+        // antiAliasCount: how many pixels the above loop should have calculated
+        float antiAliasCount = float((1+2*LOD)*(1+2*LOD));
+        // If the pixel has any transparency (i.e. the sourcePixel is at the perimeter of the image) then do antialiasing
+        if (fragColor.a < antiAliasCount)
+        {
+          // Apply antialiasing. Remove the if/else statement if you want to antialias the whole image.
+          gl_FragColor = fragColor / antiAliasCount;
           
-          // Convert back to the normalized pixel coordinate
-          vec2 sourcePixel;
-          if (inputProjection == EQUI)
-            sourcePixel = latLonToEquiUv(latLon);
-          else if (inputProjection == FISHEYE)
-            sourcePixel = pointToFisheyeUv(point);
-          else if (inputProjection == FLAT)
-            sourcePixel = latLonToFlatUv(latLon);
-          if (isTransparent)
-          {
-            gl_FragColor = TRANSPARENT_PIXEL;
-            return;
-          }
-          // Set the color of the destination pixel to the color of the source pixel
-
-          gl_FragColor = texture2D(InputTexture, sourcePixel);
+        }
+        else
+        {
+          // Ignore antialiasing
+          gl_FragColor = centerFragColor;
+        }
       }
 
     `
@@ -251,12 +295,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw } = this.props
+    const { pitch, roll, yaw, inputProjection, fov, outputProjection, width, height, sourceImage } = this.props
     return (
       <Surface width={1200} height={600}>
         <Node
           shader={shaders.Saturate}
-          uniforms={{ pitch, roll, yaw, InputTexture: 'earth_8k.jpg' }}
+          uniforms={{ pitch, roll, yaw, fov, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
         />
       </Surface>
     )

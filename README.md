@@ -4,7 +4,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 Below are instructions for installing to Ubuntu 16.04
 
-1. [Install nodejs](`https://github.com/nodesource/distributions#installation-instructions`)
+1. [Install nodejs](https://github.com/nodesource/distributions#installation-instructions) (I use v11.x)
 
 2. Clone this repository and enter the directory.
 
