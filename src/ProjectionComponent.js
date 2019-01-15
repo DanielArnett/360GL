@@ -11,7 +11,7 @@ const shaders = Shaders.create({
       vec2 SET_TO_TRANSPARENT = vec2(-1.0, -1.0);
       vec4 TRANSPARENT_PIXEL = vec4(0.0, 0.0, 0.0, 0.0);
       uniform sampler2D InputTexture;
-      uniform float pitch, roll, yaw, fov;
+      uniform float pitch, roll, yaw, fovIn, fovOut;
       uniform int inputProjection, outputProjection, width, height;
       varying vec2 uv;
       bool isTransparent = false;
@@ -72,27 +72,37 @@ const shaders = Shaders.create({
       }
 
       // Convert pixel coordinates from an Equirectangular image into latitude/longitude coordinates.
-      vec2 EquiUvToLatLon(vec2 local_uv)
+      vec2 equiUvToLatLon(vec2 local_uv)
       {
           return vec2(local_uv.y * PI - PI/2.0,
                       local_uv.x * 2.0*PI - PI);
       }
 
       // Convert  pixel coordinates from an Fisheye image into latitude/longitude coordinates.
-      vec2 FisheyeUvToLatLon(vec2 local_uv, float fovInRadians)
+      vec2 fisheyeUvToLatLon(vec2 local_uv, float fovOutput)
       {
         vec2 pos = 2.0 * local_uv - 1.0;
-        float r = distance(vec2(0.0, 0.0), pos);
+        float pixelRadius = distance(vec2(0.0,0.0),pos.xy);
         // Don't bother with pixels outside of the fisheye circle
-        if (1.0 < r) {
+        if (1.0 < pixelRadius) {
           isTransparent = true;
           return SET_TO_TRANSPARENT;
         }
+        float theta = atan(pixelRadius,1.0);
+        // The distance from the source pixel to the center of the image
+        // float r = PI*theta/(fovOutput*2.0);
+        float r = theta*4.0/(PI*fovOutput);
+        // phi is the angle of r on the unit circle. See polar coordinates for more details
+        float phi = atan(pos.x,-pos.y);
+
+        // float r = distance(vec2(0.0, 0.0), pos);
+
         vec2 latLon;
-        latLon.x = (1.0 - r)/(2.0/PI);
+        latLon.x = (1.0 - r)*PI/2.0;
+        // latLon.x = r;
         // Calculate longitude
-        latLon.y = PI + atan(-pos.x, pos.y);
-          
+        // latLon.y = PI + atan(-pos.x, pos.y);
+        latLon.y = phi;
         if (latLon.y < 0.0) {
           latLon.y += 2.0*PI;
         }
@@ -149,20 +159,17 @@ const shaders = Shaders.create({
       }
       
       // Convert latitude, longitude to x, y pixel coordinates on the source fisheye image.
-      vec2 pointToFisheyeUv(vec3 point)
+      vec2 pointToFisheyeUv(vec3 point, float fovInput)
       {	
         point = rotatePoint(point, vec3(-PI/2.0, 0.0, 0.0));
-        vec2 latLon = pointToLatLon(point);
+        // Phi and theta are flipped depending on where you read about them.
+        float theta = atan(distance(vec2(0.0,0.0),point.xy),point.z);
         // The distance from the source pixel to the center of the image
-        float r;
+        float r = theta*2.0/(PI*fovInput);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
-        float phi;
+        float phi = atan(-point.y, point.x);
         // Get the position of the source pixel
         vec2 sourcePixel;
-        // Get the source pixel radius from center
-        r = 1.0 - latLon.x/(PI / 2.0);
-        phi = atan(-point.y, point.x);
-        
         sourcePixel.x = r * cos(phi);
         sourcePixel.y = r * sin(phi);
         // Normalize the output pixel to be in the range [0,1]
@@ -213,7 +220,8 @@ const shaders = Shaders.create({
         vec3 InputRotation = vec3(pitch, roll, yaw);
         vec4 fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         vec4 centerFragColor = vec4(0.0, 0.0, 0.0, 0.0);
-        float fovInRadians = fov * 2.0 * PI;
+        float fovInput = fovIn;
+        float fovOutput = fovOut;
         // Level Of Detail: how fast should this run?
         // Set LOD to 0 to run fast, set to two to blur the image, reducing jagged edges
         const int LOD = 1;
@@ -227,9 +235,9 @@ const shaders = Shaders.create({
             // Given some pixel (uv), find the latitude and longitude of that pixel
             vec2 latLon;
             if (outputProjection == EQUI)
-              latLon = EquiUvToLatLon(uv_aa);
+              latLon = equiUvToLatLon(uv_aa);
             else if(outputProjection == FISHEYE)
-              latLon = FisheyeUvToLatLon(uv_aa, fovInRadians);
+              latLon = fisheyeUvToLatLon(uv_aa, fovOutput);
             else if (outputProjection == FLAT)
               latLon = flatImageUvToLatLon(uv_aa);
             else if (outputProjection == SPHERE)
@@ -255,7 +263,7 @@ const shaders = Shaders.create({
             if (inputProjection == EQUI)
               sourcePixel = latLonToEquiUv(latLon);
             else if (inputProjection == FISHEYE)
-              sourcePixel = pointToFisheyeUv(point);
+              sourcePixel = pointToFisheyeUv(point, fovInput);
             else if (inputProjection == FLAT)
               sourcePixel = latLonToFlatUv(latLon);
             // If a pixel is out of bounds, set it to be transparent
@@ -295,12 +303,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fov, outputProjection, width, height, sourceImage } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, outputProjection, width, height, sourceImage } = this.props
     return (
       <Surface width={1200} height={600}>
         <Node
           shader={shaders.Saturate}
-          uniforms={{ pitch, roll, yaw, fov, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
         />
       </Surface>
     )

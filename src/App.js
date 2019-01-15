@@ -11,7 +11,8 @@ class App extends Component {
     pitch: 1,
     roll: 1,
     yaw: 1,
-    fov: 1,
+    fovIn: 1,
+    fovOut: 1,
     inputProjection: 0,
     outputProjection: 0,
     sourceImage: "earth.jpg", 
@@ -34,12 +35,16 @@ class App extends Component {
   handleYawChange = (event, value) => {
     this.setState({ yaw: value/50 });
   }
-  handleFovChange = (event, value) => {
-    this.setState({ fov: value/50 });
+  handleFovInChange = (event, value) => {
+    this.setState({ fovIn: value/50 });
+  }
+
+  handleFovOutChange = (event, value) => {
+    this.setState({ fovOut: value/50 });
   }
 
   render() {
-    const { pitch, roll, yaw, fov, inputProjection, outputProjection, sourceImage } = this.state
+    const { pitch, roll, yaw, fovIn, fovOut, inputProjection, outputProjection, sourceImage } = this.state
     return (
       <div className='App-container'>
       <div className='App-slider'>
@@ -107,14 +112,19 @@ class App extends Component {
               value={yaw*50}
               onChange={this.handleYawChange}
             />
-            <p>Field of View</p>
+            <p>Field of View In</p>
             <Slider
-              value={fov*50}
-              onChange={this.handleFovChange}
+              value={fovIn*50}
+              onChange={this.handleFovInChange}
+            />
+            <p>Field of View Out</p>
+            <Slider
+              value={fovOut*50}
+              onChange={this.handleFovOutChange}
             />
         </div>
         <div className='App-Projection'>
-          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fov={fov} inputProjection={inputProjection} outputProjection={outputProjection} sourceImage={sourceImage}/>
+          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} inputProjection={inputProjection} outputProjection={outputProjection} sourceImage={sourceImage}/>
         </div>
       </div>
     );
