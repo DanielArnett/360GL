@@ -90,18 +90,13 @@ const shaders = Shaders.create({
         }
         float theta = atan(pixelRadius,1.0);
         // The distance from the source pixel to the center of the image
-        // float r = PI*theta/(fovOutput*2.0);
         float r = theta*4.0/(PI*fovOutput);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(pos.x,-pos.y);
 
-        // float r = distance(vec2(0.0, 0.0), pos);
-
         vec2 latLon;
         latLon.x = (1.0 - r)*PI/2.0;
-        // latLon.x = r;
         // Calculate longitude
-        // latLon.y = PI + atan(-pos.x, pos.y);
         latLon.y = phi;
         if (latLon.y < 0.0) {
           latLon.y += 2.0*PI;
@@ -119,12 +114,12 @@ const shaders = Shaders.create({
           return SET_TO_TRANSPARENT;
       }
       
-      vec2 flatImageUvToLatLon(vec2 local_uv)
+      vec2 flatImageUvToLatLon(vec2 local_uv, float fovOutput)
       {
         // Position of the source pixel in uv coordinates in the range [-1,1]
         vec2 pos = 2.0 * local_uv - 1.0;
         float aspectRatio = float(width)/float(height);
-        vec3 point = vec3(pos.x*aspectRatio, 1.0, pos.y);
+        vec3 point = vec3(pos.x*aspectRatio, 1.0/fovOutput, pos.y);
         return pointToLatLon(point);
       }
 
@@ -190,7 +185,7 @@ const shaders = Shaders.create({
         vec2 upperBound = vec2(upper, upper);
         return (any(lessThan(xy, lowerBound)) || any(greaterThan(xy, upperBound)));
       }
-      vec2 latLonToFlatUv(vec2 latLon)
+      vec2 latLonToFlatUv(vec2 latLon, float fovInput)
       {
         vec3 point = rotatePoint(latLonToPoint(latLon), vec3(-PI/2.0, 0.0, 0.0));
         latLon = pointToLatLon(point);
@@ -206,6 +201,8 @@ const shaders = Shaders.create({
         // Derive a 3D point on the plane which correlates with the latitude and longitude in the fisheye image.
         p = flatLatLonToPoint(latLon);
         p.x /= aspectRatio;
+        // Control the scale with the user's fov input parameter.
+        p.xy *= fovInput;
         // Position of the source pixel in the source image in the range [-1,1]
         xyOnImagePlane = p.xy / 2.0 + 0.5;
         if (outOfFlatBounds(xyOnImagePlane, 0.0, 1.0)) 
@@ -239,7 +236,7 @@ const shaders = Shaders.create({
             else if(outputProjection == FISHEYE)
               latLon = fisheyeUvToLatLon(uv_aa, fovOutput);
             else if (outputProjection == FLAT)
-              latLon = flatImageUvToLatLon(uv_aa);
+              latLon = flatImageUvToLatLon(uv_aa, fovOutput);
             else if (outputProjection == SPHERE)
               latLon = sphericalUvToLatLon(uv_aa);
             // If a pixel is out of bounds, set it to be transparent
@@ -265,7 +262,7 @@ const shaders = Shaders.create({
             else if (inputProjection == FISHEYE)
               sourcePixel = pointToFisheyeUv(point, fovInput);
             else if (inputProjection == FLAT)
-              sourcePixel = latLonToFlatUv(latLon);
+              sourcePixel = latLonToFlatUv(latLon, fovInput);
             // If a pixel is out of bounds, set it to be transparent
             if (isTransparent)
             {
