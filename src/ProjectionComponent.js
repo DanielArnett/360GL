@@ -10,6 +10,8 @@ const shaders = Shaders.create({
       float PI = 3.14159265359;
       vec2 SET_TO_TRANSPARENT = vec2(-1.0, -1.0);
       vec4 TRANSPARENT_PIXEL = vec4(0.0, 0.0, 0.0, 0.0);
+      bool FISHEYE_RADIAL_CORRECTION = true;
+      uniform float correction1, correction2, correction3, correction4;
       uniform sampler2D InputTexture;
       uniform float pitch, roll, yaw, fovIn, fovOut;
       uniform int inputProjection, outputProjection, width, height;
@@ -89,11 +91,21 @@ const shaders = Shaders.create({
           return SET_TO_TRANSPARENT;
         }
         float theta = atan(pixelRadius,1.0);
-        // The distance from the source pixel to the center of the image
-        float r = theta*4.0/(PI*fovOutput);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(pos.x,-pos.y);
 
+        float r;
+        // The distance from the source pixel to the center of the image
+        if (!FISHEYE_RADIAL_CORRECTION)
+        {
+          // Radial correction
+          // r = phi * (vars.a1 + phi * (vars.a2 + phi * (vars.a3 + phi * vars.a4))); // 0 ... 1
+          r = (4.0/PI)*(theta/fovOutput*(correction1 + theta * (correction2 + theta * (correction3 + theta * correction4))));
+        }
+        else
+        {
+          r = (4.0/PI)*theta/fovOutput;
+        }
         vec2 latLon;
         latLon.x = (1.0 - r)*PI/2.0;
         // Calculate longitude
@@ -160,6 +172,7 @@ const shaders = Shaders.create({
         // Phi and theta are flipped depending on where you read about them.
         float theta = atan(distance(vec2(0.0,0.0),point.xy),point.z);
         // The distance from the source pixel to the center of the image
+	      // r = theta * (a[0] + theta * (a[1] + theta * (a[2] + theta * a[3])));
         float r = theta*2.0/(PI*fovInput);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(-point.y, point.x);
@@ -300,12 +313,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, outputProjection, width, height, sourceImage } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, correction1, correction2, correction3, correction4, outputProjection, width, height, sourceImage } = this.props
     return (
       <Surface width={1200} height={600}>
         <Node
           shader={shaders.Saturate}
-          uniforms={{ pitch, roll, yaw, fovIn, fovOut, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, correction1, correction2, correction3, correction4, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
         />
       </Surface>
     )
