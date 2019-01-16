@@ -93,19 +93,9 @@ const shaders = Shaders.create({
         float theta = atan(pixelRadius,1.0);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(pos.x,-pos.y);
-
-        float r;
         // The distance from the source pixel to the center of the image
-        if (!FISHEYE_RADIAL_CORRECTION)
-        {
-          // Radial correction
-          // r = phi * (vars.a1 + phi * (vars.a2 + phi * (vars.a3 + phi * vars.a4))); // 0 ... 1
-          r = (4.0/PI)*(theta/fovOutput*(correction1 + theta * (correction2 + theta * (correction3 + theta * correction4))));
-        }
-        else
-        {
-          r = (4.0/PI)*theta/fovOutput;
-        }
+        float r = (4.0/PI)*theta/fovOutput;
+        
         vec2 latLon;
         latLon.x = (1.0 - r)*PI/2.0;
         // Calculate longitude
@@ -172,8 +162,13 @@ const shaders = Shaders.create({
         // Phi and theta are flipped depending on where you read about them.
         float theta = atan(distance(vec2(0.0,0.0),point.xy),point.z);
         // The distance from the source pixel to the center of the image
-	      // r = theta * (a[0] + theta * (a[1] + theta * (a[2] + theta * a[3])));
-        float r = theta*2.0/(PI*fovInput);
+        float r = (2.0/PI)*(theta/fovInput);
+        if (FISHEYE_RADIAL_CORRECTION)
+        {
+          // Do radial correction. 
+          // Source: http://paulbourke.net/dome/fisheyecorrect/
+          r *= 2.0 * (correction1 + theta * (correction2 + theta * (correction3 + theta * correction4)));
+        }
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(-point.y, point.x);
         // Get the position of the source pixel

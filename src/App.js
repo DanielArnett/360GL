@@ -13,13 +13,13 @@ class App extends Component {
     yaw: 1,
     fovIn: 1,
     fovOut: 1,
-    correction1: 1,
-    correction2: 1, 
-    correction3: 1,
-    correction4: 1, 
-    inputProjection: 0,
-    outputProjection: 0,
-    sourceImage: "earth.jpg", 
+    correction1: 0.5,
+    correction2: 0.0, 
+    correction3: 0.0,
+    correction4: 0.0, 
+    inputProjection: 1,
+    outputProjection: 1,
+    sourceImage: "radial.jpg", 
     name: "",
   }
   handleProjectionChange = (event, value) => {
@@ -47,16 +47,16 @@ class App extends Component {
     this.setState({ fovOut: value/50 });
   }
   handleCorrection1Change = (event, value) => {
-    this.setState({ correction1: value/50 });
+    this.setState({ correction1: value/100 });
   }
   handleCorrection2Change = (event, value) => {
-    this.setState({ correction2: value/50 });
+    this.setState({ correction2: value/100 });
   }
   handleCorrection3Change = (event, value) => {
-    this.setState({ correction3: value/50 });
+    this.setState({ correction3: value/100 });
   }
   handleCorrection4Change = (event, value) => {
-    this.setState({ correction4: value/50 });
+    this.setState({ correction4: value/100 });
   }
   handleSliderChange = (event, value) => {
     this.setState({ [event.target.name]: event.target.value/50 });
@@ -141,24 +141,24 @@ class App extends Component {
               value={fovOut*50}
               onChange={this.handleFovOutChange}
             />
-            <p>Fisheye Correction 1</p>
+            <p>Fisheye Correction 1: {this.state.correction1}</p>
             <Slider
-              value={correction1*50}
+              value={correction1*100}
               onChange={this.handleCorrection1Change}
             />
-            <p>Fisheye Correction 2</p>
+            <p>Fisheye Correction 2: {this.state.correction2}</p>
             <Slider
-              value={correction2*50}
+              value={correction2*100}
               onChange={this.handleCorrection2Change}
             />
-            <p>Fisheye Correction 3</p>
+            <p>Fisheye Correction 3: {this.state.correction3}</p>
             <Slider
-              value={correction3*50}
+              value={correction3*100}
               onChange={this.handleCorrection3Change}
             />
-            <p>Fisheye Correction 4</p>
+            <p>Fisheye Correction 4: {this.state.correction4}</p>
             <Slider
-              value={correction4*50}
+              value={correction4*100}
               onChange={this.handleCorrection4Change}
             />
         </div>
