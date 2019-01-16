@@ -3,7 +3,7 @@ import { Shaders, Node, GLSL } from "gl-react";
 import { Surface } from "gl-react-dom";
 
 const shaders = Shaders.create({
-  Saturate: {
+  Reproject: {
     frag: GLSL`
     // TODO turn this into its own .frag file.
       precision highp float;
@@ -13,7 +13,7 @@ const shaders = Shaders.create({
       bool FISHEYE_RADIAL_CORRECTION = true;
       uniform float correction1, correction2, correction3, correction4;
       uniform sampler2D InputTexture;
-      uniform float pitch, roll, yaw, fovIn, fovOut;
+      uniform float pitch, roll, yaw, fovIn, fovOut, x, y, z;
       uniform int inputProjection, outputProjection, width, height;
       varying vec2 uv;
       bool isTransparent = false;
@@ -156,7 +156,7 @@ const shaders = Shaders.create({
       }
       
       // Convert latitude, longitude to x, y pixel coordinates on the source fisheye image.
-      vec2 pointToFisheyeUv(vec3 point, float fovInput)
+      vec2 pointToFisheyeUv(vec3 point, float fovInput, vec4 fishCorrect)
       {	
         point = rotatePoint(point, vec3(-PI/2.0, 0.0, 0.0));
         // Phi and theta are flipped depending on where you read about them.
@@ -167,7 +167,7 @@ const shaders = Shaders.create({
         {
           // Do radial correction. 
           // Source: http://paulbourke.net/dome/fisheyecorrect/
-          r *= 2.0 * (correction1 + theta * (correction2 + theta * (correction3 + theta * correction4)));
+          r *= 2.0 * (fishCorrect.x + theta * (fishCorrect.y + theta * (fishCorrect.z + theta * fishCorrect.w)));
         }
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(-point.y, point.x);
@@ -227,6 +227,8 @@ const shaders = Shaders.create({
         vec4 centerFragColor = vec4(0.0, 0.0, 0.0, 0.0);
         float fovInput = fovIn;
         float fovOutput = fovOut;
+        vec4 fishCorrect = vec4(correction1-0.5, correction2, correction3, correction4);
+        fishCorrect.yzw -= 1.0;
         // Level Of Detail: how fast should this run?
         // Set LOD to 0 to run fast, set to two to blur the image, reducing jagged edges
         const int LOD = 1;
@@ -242,7 +244,10 @@ const shaders = Shaders.create({
             if (outputProjection == EQUI)
               latLon = equiUvToLatLon(uv_aa);
             else if(outputProjection == FISHEYE)
+            {
+              uv_aa.x = (uv_aa.x * float(width) / float(height)) - 0.5;
               latLon = fisheyeUvToLatLon(uv_aa, fovOutput);
+            }
             else if (outputProjection == FLAT)
               latLon = flatImageUvToLatLon(uv_aa, fovOutput);
             else if (outputProjection == SPHERE)
@@ -260,6 +265,7 @@ const shaders = Shaders.create({
             vec3 point = latLonToPoint(latLon);
             // Rotate the point based on the user input in radians
             point = rotatePoint(point, InputRotation.rgb * PI);
+            point.xyz += vec3(x, y, z) - 1.0;
             // Convert back to latitude and longitude
             latLon = pointToLatLon(point);
             
@@ -268,7 +274,7 @@ const shaders = Shaders.create({
             if (inputProjection == EQUI)
               sourcePixel = latLonToEquiUv(latLon);
             else if (inputProjection == FISHEYE)
-              sourcePixel = pointToFisheyeUv(point, fovInput);
+              sourcePixel = pointToFisheyeUv(point, fovInput, fishCorrect);
             else if (inputProjection == FLAT)
               sourcePixel = latLonToFlatUv(latLon, fovInput);
             // If a pixel is out of bounds, set it to be transparent
@@ -308,12 +314,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, correction1, correction2, correction3, correction4, outputProjection, width, height, sourceImage } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, outputProjection, width, height, sourceImage } = this.props
     return (
       <Surface width={1200} height={600}>
         <Node
-          shader={shaders.Saturate}
-          uniforms={{ pitch, roll, yaw, fovIn, fovOut, correction1, correction2, correction3, correction4, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
+          shader={shaders.Reproject}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
         />
       </Surface>
     )

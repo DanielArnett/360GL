@@ -13,13 +13,16 @@ class App extends Component {
     yaw: 1,
     fovIn: 1,
     fovOut: 1,
-    correction1: 0.5,
-    correction2: 0.0, 
-    correction3: 0.0,
-    correction4: 0.0, 
-    inputProjection: 1,
-    outputProjection: 1,
-    sourceImage: "radial.jpg", 
+    x: 1,
+    y: 1,
+    z: 1,
+    correction1: 1,
+    correction2: 1, 
+    correction3: 1,
+    correction4: 1, 
+    inputProjection: 0,
+    outputProjection: 0,
+    sourceImage: "earth.jpg", 
     name: "",
   }
   handleProjectionChange = (event, value) => {
@@ -47,23 +50,32 @@ class App extends Component {
     this.setState({ fovOut: value/50 });
   }
   handleCorrection1Change = (event, value) => {
-    this.setState({ correction1: value/100 });
+    this.setState({ correction1: value/50 });
   }
   handleCorrection2Change = (event, value) => {
-    this.setState({ correction2: value/100 });
+    this.setState({ correction2: value/50 });
   }
   handleCorrection3Change = (event, value) => {
-    this.setState({ correction3: value/100 });
+    this.setState({ correction3: value/50 });
   }
   handleCorrection4Change = (event, value) => {
-    this.setState({ correction4: value/100 });
+    this.setState({ correction4: value/50 });
+  }
+  handleXChange = (event, value) => {
+    this.setState({ x: value/50 });
+  }
+  handleYChange = (event, value) => {
+    this.setState({ y: value/50 });
+  }
+  handleZChange = (event, value) => {
+    this.setState({ z: value/50 });
   }
   handleSliderChange = (event, value) => {
     this.setState({ [event.target.name]: event.target.value/50 });
   }
 
   render() {
-    const { pitch, roll, yaw, fovIn, fovOut, correction1, correction2, correction3, correction4, inputProjection, outputProjection, sourceImage } = this.state
+    const { pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, sourceImage } = this.state
     return (
       <div className='App-container'>
       <div className='App-slider'>
@@ -141,29 +153,44 @@ class App extends Component {
               value={fovOut*50}
               onChange={this.handleFovOutChange}
             />
-            <p>Fisheye Correction 1: {this.state.correction1}</p>
+            <p>X</p>
             <Slider
-              value={correction1*100}
+              value={x*50}
+              onChange={this.handleXChange}
+            />
+            <p>Y</p>
+            <Slider
+              value={y*50}
+              onChange={this.handleYChange}
+            />
+            <p>Z</p>
+            <Slider
+              value={z*50}
+              onChange={this.handleZChange}
+            />
+            <p>Fisheye Correction 1: {this.state.correction1 - 0.5}</p>
+            <Slider
+              value={correction1*50}
               onChange={this.handleCorrection1Change}
             />
-            <p>Fisheye Correction 2: {this.state.correction2}</p>
+            <p>Fisheye Correction 2: {this.state.correction2 - 1}</p>
             <Slider
-              value={correction2*100}
+              value={correction2*50}
               onChange={this.handleCorrection2Change}
             />
-            <p>Fisheye Correction 3: {this.state.correction3}</p>
+            <p>Fisheye Correction 3: {this.state.correction3 - 1}</p>
             <Slider
-              value={correction3*100}
+              value={correction3*50}
               onChange={this.handleCorrection3Change}
             />
-            <p>Fisheye Correction 4: {this.state.correction4}</p>
+            <p>Fisheye Correction 4: {this.state.correction4 - 1}</p>
             <Slider
-              value={correction4*100}
+              value={correction4*50}
               onChange={this.handleCorrection4Change}
             />
         </div>
         <div className='App-Projection'>
-          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4}  inputProjection={inputProjection} outputProjection={outputProjection} sourceImage={sourceImage}/>
+          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} x={x} y={y} z={z} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4}  inputProjection={inputProjection} outputProjection={outputProjection} sourceImage={sourceImage}/>
         </div>
       </div>
     );
