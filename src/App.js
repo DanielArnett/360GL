@@ -5,7 +5,8 @@ import ProjectionComponent from './ProjectionComponent'
 import Select from '@material-ui/core/Select';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
-
+import ImageUploader from 'react-images-upload';
+ 
 class App extends Component {
   state = {
     pitch: 1,
@@ -22,8 +23,11 @@ class App extends Component {
     correction4: 1, 
     inputProjection: 0,
     outputProjection: 0,
+    gridLines: 0,
+    pictures: [],
     sourceImage: "earth.jpg", 
     name: "",
+    uploadedImage: "",
   }
   handleProjectionChange = (event, value) => {
     this.setState({ inputProjection: value });
@@ -74,12 +78,35 @@ class App extends Component {
     this.setState({ [event.target.name]: event.target.value/50 });
   }
 
+  constructor(props) {
+      super(props);
+        this.onDrop = this.onDrop.bind(this);
+  }
+  onDrop(picture) {
+      this.setState({
+          pictures: picture,
+          uploadedImage: picture[picture.length-1].name,
+          sourceImage: picture[picture.length-1].name,
+          
+      });
+  }
   render() {
-    const { pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, sourceImage } = this.state
+    const { pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, gridLines, sourceImage } = this.state
     return (
       <div className='App-container'>
       <div className='App-slider'>
-        <div className='Source-image-selecter'>
+        <div className='App-Options'>
+          <ImageUploader
+              withIcon={true}
+              buttonText='Choose image'
+              onChange={this.onDrop}
+              imgExtension={['.jpg', '.gif', '.png', '.gif']}
+              maxFileSize={5242880}
+              singleImage={true}
+              withPreview={false}
+          />
+        </div>
+        <div className='App-Options'>
           <InputLabel htmlFor="sourceImage">Source Image</InputLabel>
               { <Select
                 value={this.sourceImage}
@@ -93,26 +120,32 @@ class App extends Component {
                 <MenuItem value={"earth_8k.jpg"}>Earth 8k</MenuItem>
                 <MenuItem value={"radial.jpg"}>Fisheye Grid</MenuItem>
                 <MenuItem value={"bourke_sphericalpano.jpg"}>360 Photo</MenuItem>
+                <MenuItem value={this.state.uploadedImage}>{this.state.uploadedImage}</MenuItem>
               </Select>
               }
         </div>
-        <InputLabel shrink htmlFor="inputProjection">
-            Input Projection
-          </InputLabel>
-            { <Select
-              value={this.inputProjection}
-              onChange={this.handleChange}
-              inputProps={{
-                name: 'inputProjection',
-                id: 'inputProjection',
-              }}
-              displayEmpty
-            >
-              <MenuItem value={0}>Equirectangular</MenuItem>
-              <MenuItem value={1}>Fisheye</MenuItem>
-              <MenuItem value={2}>Rectilinear</MenuItem>
-            </Select>
-            }
+        
+        <div className='App-Options'>
+          <InputLabel shrink htmlFor="inputProjection">
+              Input Projection
+            </InputLabel>
+              { <Select
+                value={this.inputProjection}
+                onChange={this.handleChange}
+                inputProps={{
+                  name: 'inputProjection',
+                  id: 'inputProjection',
+                }}
+                displayEmpty
+              >
+                <MenuItem value={0}>Equirectangular</MenuItem>
+                <MenuItem value={1}>Fisheye</MenuItem>
+                <MenuItem value={2}>Rectilinear</MenuItem>
+              </Select>
+              }
+        </div>
+        
+        <div className='App-Options'>
             <InputLabel htmlFor="outputProjection">Output Projection</InputLabel>
             { <Select
               value={this.outputProjection}
@@ -128,47 +161,86 @@ class App extends Component {
               <MenuItem value={3}>Sphere</MenuItem>
             </Select>
             }
+        </div>
+        <div className='App-Options'>
+            <InputLabel htmlFor="gridLines">Grid Lines</InputLabel>
+            { <Select
+              value={this.gridLines}
+              onChange={this.handleChange}
+              inputProps={{
+                name: 'gridLines',
+                id: 'gridLines',
+              }}
+            >
+              <MenuItem value={0}>Off</MenuItem>
+              <MenuItem value={1}>On</MenuItem>
+            </Select>
+            }
+        </div>
+        <div className='App-Options'>
             <p>Pitch</p>
             <Slider
               value={pitch*50}
               onChange={this.handlePitchChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Roll</p>
             <Slider
               value={roll*50}
               onChange={this.handleRollChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Yaw</p>
             <Slider
               value={yaw*50}
               onChange={this.handleYawChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Field of View In</p>
             <Slider
               value={fovIn*50}
               onChange={this.handleFovInChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Field of View Out</p>
             <Slider
               value={fovOut*50}
               onChange={this.handleFovOutChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>X</p>
             <Slider
               value={x*50}
               onChange={this.handleXChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Y</p>
             <Slider
               value={y*50}
               onChange={this.handleYChange}
             />
+        </div>
+        
+        <div className='App-Options'>
             <p>Z</p>
             <Slider
               value={z*50}
               onChange={this.handleZChange}
             />
-            <p>Fisheye Correction 1: {this.state.correction1 - 0.5}</p>
+        </div>
+            { /* <p>Fisheye Correction 1: {this.state.correction1 - 0.5}</p>
             <Slider
               value={correction1*50}
               onChange={this.handleCorrection1Change}
@@ -187,10 +259,10 @@ class App extends Component {
             <Slider
               value={correction4*50}
               onChange={this.handleCorrection4Change}
-            />
+            /> */ }
         </div>
         <div className='App-Projection'>
-          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} x={x} y={y} z={z} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4}  inputProjection={inputProjection} outputProjection={outputProjection} sourceImage={sourceImage}/>
+          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} x={x} y={y} z={z} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4}  inputProjection={inputProjection} outputProjection={outputProjection} gridLines={gridLines} sourceImage={sourceImage}/>
         </div>
       </div>
     );

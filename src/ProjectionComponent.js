@@ -14,13 +14,15 @@ const shaders = Shaders.create({
       uniform float correction1, correction2, correction3, correction4;
       uniform sampler2D InputTexture;
       uniform float pitch, roll, yaw, fovIn, fovOut, x, y, z;
-      uniform int inputProjection, outputProjection, width, height;
+      uniform int inputProjection, outputProjection, gridLines, width, height;
       varying vec2 uv;
       bool isTransparent = false;
       const int EQUI = 0;
       const int FISHEYE = 1;
       const int FLAT = 2;
       const int SPHERE = 3;
+      const int GRIDLINES_OFF = 0;
+      const int GRIDLINES_ON = 1;
 
       // uniform vec3 InputRotation;
       // A transformation matrix rotating about the x axis by th degrees.
@@ -229,6 +231,7 @@ const shaders = Shaders.create({
         float fovOutput = fovOut;
         vec4 fishCorrect = vec4(correction1-0.5, correction2, correction3, correction4);
         fishCorrect.yzw -= 1.0;
+        float lineCount = 0.0;
         // Level Of Detail: how fast should this run?
         // Set LOD to 0 to run fast, set to two to blur the image, reducing jagged edges
         const int LOD = 1;
@@ -263,9 +266,10 @@ const shaders = Shaders.create({
               // Y increases from back to front [-1 to 1]
               // Z increases from bottom to top [-1 to 1]
             vec3 point = latLonToPoint(latLon);
+            // X, Y, Z translation inputs from the user.
+            point.xyz += vec3(x, y, z) - 1.0;
             // Rotate the point based on the user input in radians
             point = rotatePoint(point, InputRotation.rgb * PI);
-            point.xyz += vec3(x, y, z) - 1.0;
             // Convert back to latitude and longitude
             latLon = pointToLatLon(point);
             
@@ -284,6 +288,26 @@ const shaders = Shaders.create({
             }
             // Set the color of the destination pixel to the color of the source pixel
             vec4 color = texture2D(InputTexture, sourcePixel);
+
+            if (inputProjection == EQUI && gridLines == GRIDLINES_ON)
+            {
+              float minDistance = 0.3;
+              float lineThickness = minDistance;
+              for (float i = -18.0; i <= 18.0; i += 1.0)
+              {
+                float distanceToLine = abs(degrees(latLon.y) - i*10.0);
+                if (distanceToLine <= minDistance)
+                  minDistance = distanceToLine;
+                distanceToLine = abs(degrees(latLon.x) - i*10.0);
+                if (distanceToLine <= minDistance)
+                  minDistance = distanceToLine;
+              }
+              if (minDistance < lineThickness)
+              {
+                color = vec4(0.0, 0.0, 0.0, 1.0);
+                lineCount += 1.0;
+              }
+            }
             fragColor += color;
             if (i == 0 && j == 0)
             {
@@ -295,7 +319,7 @@ const shaders = Shaders.create({
         // antiAliasCount: how many pixels the above loop should have calculated
         float antiAliasCount = float((1+2*LOD)*(1+2*LOD));
         // If the pixel has any transparency (i.e. the sourcePixel is at the perimeter of the image) then do antialiasing
-        if (fragColor.a < antiAliasCount)
+        if (fragColor.a < antiAliasCount || lineCount > 0.0)
         {
           // Apply antialiasing. Remove the if/else statement if you want to antialias the whole image.
           gl_FragColor = fragColor / antiAliasCount;
@@ -314,12 +338,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, outputProjection, width, height, sourceImage } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, outputProjection, gridLines, width, height, sourceImage } = this.props
     return (
-      <Surface width={1200} height={600}>
+      <Surface width={1400} height={700}>
         <Node
           shader={shaders.Reproject}
-          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, width:1200, height:600, InputTexture: sourceImage, }}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, gridLines, width:1400, height:700, InputTexture: sourceImage, }}
         />
       </Surface>
     )

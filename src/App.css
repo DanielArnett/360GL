@@ -3,12 +3,16 @@
 }
 
 .App-slider {
-  width: 200px;
+  width: 300px;
   height: 200%;
-  padding: 50px;
+  padding: 25px;
+}
+.App-Options {
+  line-height: 0pt;
+  margin-top: 40px; 
 }
 
-.App-map {
-  width: 500px;
+.App-Projection {
+  width: 250px;
   height: 100%;
 }
