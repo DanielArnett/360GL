@@ -54,6 +54,7 @@ const shaders = Shaders.create({
       }
 
       // Convert a 3D point on the unit sphere into latitude and longitude.
+      // In more mathy terms we're converting from "Cartesian Coordinates" to "Spherical Coordinates"
       vec2 pointToLatLon(vec3 point)
       {
         float r = distance(vec3(0.0, 0.0, 0.0), point);
@@ -64,6 +65,7 @@ const shaders = Shaders.create({
       }
 
       // Convert latitude, longitude into a 3d point on the unit-sphere.
+      // In more mathy terms we're converting from  "Spherical Coordinates" to "Cartesian Coordinates"
       vec3 latLonToPoint(vec2 latLon)
       {
           float lat = latLon.x;
@@ -267,12 +269,18 @@ const shaders = Shaders.create({
               // Z increases from bottom to top [-1 to 1]
             vec3 point = latLonToPoint(latLon);
             // X, Y, Z translation inputs from the user.
-            point.xyz += vec3(x, y, z) - 1.0;
+            point.xyz += 5.0*(vec3(x, y, z) - 1.0);
             // Rotate the point based on the user input in radians
             point = rotatePoint(point, InputRotation.rgb * PI);
+            
             // Convert back to latitude and longitude
             latLon = pointToLatLon(point);
-            
+            // if (1.0 < distance(point, vec3(0.0, 0.0, 0.0)))
+            // {
+            //   // isTransparent == true;
+            //   gl_FragColor = vec4(latLon.x, latLon.y, 0.0, 1.0);
+            //   return;
+            // }
             // Convert back to the normalized pixel coordinate
             vec2 sourcePixel;
             if (inputProjection == EQUI)
@@ -282,7 +290,7 @@ const shaders = Shaders.create({
             else if (inputProjection == FLAT)
               sourcePixel = latLonToFlatUv(latLon, fovInput);
             // If a pixel is out of bounds, set it to be transparent
-            if (isTransparent)
+            if (isTransparent || sourcePixel.x < 0.0  || sourcePixel.y < 0.0 || 1.0 < sourcePixel.x || 1.0 < sourcePixel.y)
             {
               continue;
             }
