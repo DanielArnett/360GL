@@ -11,10 +11,11 @@ const shaders = Shaders.create({
       vec2 SET_TO_TRANSPARENT = vec2(-1.0, -1.0);
       vec4 TRANSPARENT_PIXEL = vec4(0.0, 0.0, 0.0, 0.0);
       bool FISHEYE_RADIAL_CORRECTION = true;
-      uniform float correction1, correction2, correction3, correction4;
+      uniform float correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter;
       uniform sampler2D InputTexture;
       uniform float pitch, roll, yaw, fovIn, fovOut, x, y, z;
       uniform int inputProjection, outputProjection, gridLines, width, height;
+      uniform float test;
       varying vec2 uv;
       bool isTransparent = false;
       const int EQUI = 0;
@@ -88,22 +89,22 @@ const shaders = Shaders.create({
       vec2 fisheyeUvToLatLon(vec2 local_uv, float fovOutput)
       {
         vec2 pos = 2.0 * local_uv - 1.0;
-        float pixelRadius = distance(vec2(0.0,0.0),pos.xy);
+        // The distance from the source pixel to the center of the image
+        float r = distance(vec2(0.0,0.0),pos.xy);
         // Don't bother with pixels outside of the fisheye circle
-        if (1.0 < pixelRadius) {
+        if (1.0 < r) {
           isTransparent = true;
           return SET_TO_TRANSPARENT;
         }
-        float theta = atan(pixelRadius,1.0);
+        float theta = atan(r,1.0);
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(pos.x,-pos.y);
-        // The distance from the source pixel to the center of the image
-        float r = (4.0/PI)*theta/fovOutput;
-        
+        r = tan(theta/fovOutput);
         vec2 latLon;
         latLon.x = (1.0 - r)*PI/2.0;
         // Calculate longitude
-        latLon.y = phi;
+        latLon.y = PI + atan(-pos.x, pos.y);
+          
         if (latLon.y < 0.0) {
           latLon.y += 2.0*PI;
         }
@@ -173,6 +174,7 @@ const shaders = Shaders.create({
           // Source: http://paulbourke.net/dome/fisheyecorrect/
           r *= 2.0 * (fishCorrect.x + theta * (fishCorrect.y + theta * (fishCorrect.z + theta * fishCorrect.w)));
         }
+
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(-point.y, point.x);
         // Get the position of the source pixel
@@ -226,6 +228,16 @@ const shaders = Shaders.create({
       }
       void main()
       {
+        vec2 temp_uv = uv;
+        temp_uv.x = (temp_uv.x * float(width) / float(height)) - 0.5;
+        if (gridLines == GRIDLINES_ON && outputProjection == FISHEYE)
+        {
+          if (abs(distance(vec2(0.0, 0.0), 2.0 * temp_uv - 1.0) - 1.0) < 0.01)
+          {
+            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            return;
+          }
+        }
         vec3 InputRotation = vec3(pitch, roll, yaw);
         vec4 fragColor = vec4(0.0, 0.0, 0.0, 0.0);
         vec4 centerFragColor = vec4(0.0, 0.0, 0.0, 0.0);
@@ -243,7 +255,13 @@ const shaders = Shaders.create({
           for(int j = -LOD; j <= LOD; j++)
           {
             isTransparent = false;
+
+            
             vec2 uv_aa = uv + vec2(i, j)/vec2(width, height);
+
+            
+            // vec2 newDimensions = vec2(cropRight-1.0 - cropLeft-1.0, cropTop-1.0 - cropBottom-1.0)
+            // uv_aa = uv_aa
             // Given some pixel (uv), find the latitude and longitude of that pixel
             vec2 latLon;
             if (outputProjection == EQUI)
@@ -269,10 +287,15 @@ const shaders = Shaders.create({
               // Z increases from bottom to top [-1 to 1]
             vec3 point = latLonToPoint(latLon);
             // X, Y, Z translation inputs from the user.
-            point.xyz += 5.0*(vec3(x, y, z) - 1.0);
+            vec3 translation = 5.0*(vec3(x, y, z) - 1.0); 
             // Rotate the point based on the user input in radians
             point = rotatePoint(point, InputRotation.rgb * PI);
-            
+            point.xyz += translation;
+            if (distance(vec3(0.0, 0.0, 0.0), translation) > 1.0 && distance(vec3(0.0, 0.0, 0.0), point) > distance(vec3(0.0, 0.0, 0.0), translation))
+            {
+              isTransparent = true;
+              continue;
+            }
             // Convert back to latitude and longitude
             latLon = pointToLatLon(point);
             // if (1.0 < distance(point, vec3(0.0, 0.0, 0.0)))
@@ -289,13 +312,31 @@ const shaders = Shaders.create({
               sourcePixel = pointToFisheyeUv(point, fovInput, fishCorrect);
             else if (inputProjection == FLAT)
               sourcePixel = latLonToFlatUv(latLon, fovInput);
+
+            vec2 croppedUv = 2.0*sourcePixel-1.0;
+            float croppedWidth = cropRight - (cropLeft - 1.0);
+            float croppedHeight = cropTop - (cropBottom - 1.0);
+            // gl_FragColor = vec4(croppedWidth, 0.0, 0.0, 1.0);
+            // return;
+            croppedUv = vec2(croppedUv.x / cropRight, croppedUv.y / cropTop);
+            float newWidth = float(width) / (croppedWidth + 1.0);
+            float newHeight = float(newWidth) / float(height) ;
+            croppedUv.y /= newHeight;
+            croppedUv = 0.5*croppedUv+0.5;
+            croppedUv.x += xCenter - 1.0;
+            if (croppedUv.x < 0.0  || croppedUv.y < 0.0 || 1.0 < croppedUv.x || 1.0 < croppedUv.y)
+            {
+              continue;
+              // gl_FragColor = vec4(0.0, 0.0, 0.0, 0.0);
+              // return;
+            }
             // If a pixel is out of bounds, set it to be transparent
-            if (isTransparent || sourcePixel.x < 0.0  || sourcePixel.y < 0.0 || 1.0 < sourcePixel.x || 1.0 < sourcePixel.y)
+            else if (isTransparent)
             {
               continue;
             }
             // Set the color of the destination pixel to the color of the source pixel
-            vec4 color = texture2D(InputTexture, sourcePixel);
+            vec4 color = texture2D(InputTexture, croppedUv);
 
             if (inputProjection == EQUI && gridLines == GRIDLINES_ON)
             {
@@ -346,12 +387,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, outputProjection, gridLines, width, height, sourceImage } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, outputProjection, gridLines, width, height, sourceImage, test } = this.props
     return (
       <Surface width={1400} height={700}>
         <Node
           shader={shaders.Reproject}
-          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, inputProjection, outputProjection, gridLines, width:1400, height:700, InputTexture: sourceImage, }}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, inputProjection, outputProjection, gridLines, width:1400, height:700, InputTexture: sourceImage, test }}
         />
       </Surface>
     )

@@ -1,3 +1,5 @@
+This webapp was developed by Daniel Arnett. Thanks goes to Paul Bourke from the University of Western Australia for developing and disseminating the algorithms used.
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Installation
