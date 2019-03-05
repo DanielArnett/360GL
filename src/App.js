@@ -30,6 +30,7 @@ class App extends Component {
     cropLeft: 1,
     cropRight: 1,
     xCenter: 1,
+    yCenter: 1,
     inputProjection: 0,
     outputProjection: 0,
     gridLines: 0,
@@ -107,6 +108,9 @@ class App extends Component {
   handleXCenterChange = (event, value) => {
     this.setState({ xCenter: value/50 });
   }
+  handleYCenterChange = (event, value) => {
+    this.setState({ yCenter: value/50 });
+  }
   handleTestChange = (event, value) => {
     this.setState({ test: value/50 });
   }
@@ -127,7 +131,7 @@ class App extends Component {
       });
   }
   render() {
-    const { pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, inputProjection, outputProjection, gridLines, sourceImage, url, test } = this.state
+    const { pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, yCenter, inputProjection, outputProjection, gridLines, sourceImage, url, test } = this.state
     return (
       <div className='App-container'>
       <div className='App-slider'>
@@ -322,6 +326,13 @@ class App extends Component {
         </div>
         
         <div className='App-Options'>
+            <p>Y Center : {((this.state.yCenter-1.0)*1400.0/2.0).toFixed(0)} pixels</p>
+            <Slider
+              value={yCenter*50}
+              onChange={this.handleYCenterChange}
+            />
+        </div>
+        <div className='App-Options'>
             <p>Fisheye Correction 1: {(this.state.correction1 - 0.5).toFixed(4)} r</p>
             <Slider
               value={correction1*50}
@@ -361,7 +372,7 @@ class App extends Component {
         </div>*/}
         </div>
         <div className='App-Projection'>
-          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} x={x} y={y} z={z} xCenter={xCenter} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4} cropTop={cropTop} cropBottom={cropBottom} cropLeft={cropLeft} cropRight={cropRight}  inputProjection={inputProjection} outputProjection={outputProjection} gridLines={gridLines} sourceImage={sourceImage} test={test}/>
+          <ProjectionComponent pitch={pitch} roll={roll} yaw={yaw} fovIn={fovIn} fovOut={fovOut} x={x} y={y} z={z} xCenter={xCenter} yCenter={yCenter} correction1={correction1} correction2={correction2} correction3={correction3} correction4={correction4} cropTop={cropTop} cropBottom={cropBottom} cropLeft={cropLeft} cropRight={cropRight}  inputProjection={inputProjection} outputProjection={outputProjection} gridLines={gridLines} sourceImage={sourceImage} test={test}/>
         </div>
       </div>
     );

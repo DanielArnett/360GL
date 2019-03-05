@@ -11,7 +11,7 @@ const shaders = Shaders.create({
       vec2 SET_TO_TRANSPARENT = vec2(-1.0, -1.0);
       vec4 TRANSPARENT_PIXEL = vec4(0.0, 0.0, 0.0, 0.0);
       bool FISHEYE_RADIAL_CORRECTION = true;
-      uniform float correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter;
+      uniform float correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, yCenter;
       uniform sampler2D InputTexture;
       uniform float pitch, roll, yaw, fovIn, fovOut, x, y, z;
       uniform int inputProjection, outputProjection, gridLines, width, height;
@@ -319,11 +319,12 @@ const shaders = Shaders.create({
             // gl_FragColor = vec4(croppedWidth, 0.0, 0.0, 1.0);
             // return;
             croppedUv = vec2(croppedUv.x / cropRight, croppedUv.y / cropTop);
-            float newWidth = float(width) / (croppedWidth + 1.0);
-            float newHeight = float(newWidth) / float(height) ;
-            croppedUv.y /= newHeight;
+            //float newWidth = float(width) / (croppedWidth + 1.0);
+            //float newHeight = float(newWidth) / float(height) ;
+            //croppedUv.y /= newHeight;
             croppedUv = 0.5*croppedUv+0.5;
             croppedUv.x += xCenter - 1.0;
+            croppedUv.y += yCenter - 1.0;
             if (croppedUv.x < 0.0  || croppedUv.y < 0.0 || 1.0 < croppedUv.x || 1.0 < croppedUv.y)
             {
               continue;
@@ -387,12 +388,12 @@ const shaders = Shaders.create({
 
 class ProjectionComponent extends Component {
   render() {
-    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, outputProjection, gridLines, width, height, sourceImage, test } = this.props
+    const { pitch, roll, yaw, inputProjection, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, yCenter, outputProjection, gridLines, width, height, sourceImage, test } = this.props
     return (
       <Surface width={1400} height={700}>
         <Node
           shader={shaders.Reproject}
-          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, inputProjection, outputProjection, gridLines, width:1400, height:700, InputTexture: sourceImage, test }}
+          uniforms={{ pitch, roll, yaw, fovIn, fovOut, x, y, z, correction1, correction2, correction3, correction4, cropTop, cropBottom, cropLeft, cropRight, xCenter, yCenter, inputProjection, outputProjection, gridLines, width:1400, height:700, InputTexture: sourceImage, test }}
         />
       </Surface>
     )
