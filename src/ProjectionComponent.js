@@ -17,7 +17,7 @@ const shaders = Shaders.create({
       uniform int inputProjection, outputProjection, gridLines, width, height;
       uniform float test;
       varying vec2 uv;
-      bool isTransparent = false;
+      bool isTransparent = false; // A global flag indicating if the pixel should just set to transparent and return immediately. 
       const int EQUI = 0;
       const int FISHEYE = 1;
       const int FLAT = 2;
@@ -114,52 +114,71 @@ const shaders = Shaders.create({
         return latLon;
       }
 
-      vec2 cubemapUvToLatLon(vec2 local_uv)
+      // Convert a cubemap uv to a 3d point on a unit cube
+      vec3 cubemapUvToPoint(vec2 local_uv)
       {
         float verticalBoundary = 0.5;
         float leftBoundary  = 1.0/3.0;
         float rightBoundary = 2.0/3.0;
         // Position of the source pixel in uv coordinates in the range [-1,1]
-        vec2 pos = 2.0 * local_uv - 1.0;
+        vec2 pos = (2.0 * local_uv) - 1.0;
         vec3 point;
         float faceDistance = fovOut / 3.0;
         // Remove overlap in the image.
         float verticalCorrection = 2.0/3.0;
-        // Top left face
+        // The faces of the cubemap. To explain I'll define the following:
+        // Let's call +X: "Right"
+        //            -X: "Left"
+        //            +Y: "Forward"
+        //            -Y: "Back"
+        //            +Z: "Up"
+        //            -Z: "Down"
+        // Top left face in output image
         if (local_uv.x <= leftBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(2.0/3.0, -0.5);
+          // "Left" face of cube
           point = vec3(-faceDistance, pos.x, verticalCorrection*pos.y);
         }
-        // Top Middle Face
+        // Top Middle Face in output image
         if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(0.0, -0.5);
+          // "Front" face of cube 
           point = vec3(pos.x, faceDistance, verticalCorrection*pos.y);
         }
-        // Top Right Face
+        // Top Right Face in output image
         if (rightBoundary < local_uv.x && verticalBoundary <= local_uv.y) {
           pos += vec2(-2.0/3.0, -0.5);
+          // "Right" face of cube
           point = vec3(faceDistance, -pos.x, verticalCorrection*pos.y);
 
         }
-        // Bottom left face
+        // Bottom left face in output image
         if (local_uv.x <= leftBoundary && local_uv.y < verticalBoundary) {
           pos += vec2(2.0/3.0, 0.5);
+          // "Top" face of cube
           point = vec3(-pos.y*verticalCorrection, -pos.x, faceDistance);
 
         }
-        // Bottom Middle Face
+        // Bottom Middle Face in output image
         if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary * 2.0 && local_uv.y < verticalBoundary) {
           pos += vec2(0.0, 0.5);
+          // "Back" face of cube
           point = vec3(-pos.y*verticalCorrection, -faceDistance, -pos.x);
 
         }
-        // Bottom Right Face
+        // Bottom Right Face in output image
         if (rightBoundary < local_uv.x && local_uv.y < verticalBoundary) {
           pos += vec2(-2.0/3.0, 0.0);
+          // "Bottom" face of cube
           point = vec3(-pos.y*verticalCorrection, pos.x, -faceDistance);
 
         }
-        return pointToLatLon(point);
+        return point;
+      }
+      // Convert a cubemap image to Latitude/Longitude Points
+      vec2 cubemapUvToLatLon(vec2 local_uv)
+      {
+        return pointToLatLon(cubemapUvToPoint(local_uv));
       }
       
       vec2 flatImageUvToLatLon(vec2 local_uv, float fovOutput)
@@ -240,6 +259,8 @@ const shaders = Shaders.create({
         vec2 upperBound = vec2(upper, upper);
         return (any(lessThan(xy, lowerBound)) || any(greaterThan(xy, upperBound)));
       }
+
+
       vec2 latLonToFlatUv(vec2 latLon, float fovInput)
       {
         vec3 point = rotatePoint(latLonToPoint(latLon), vec3(-PI/2.0, 0.0, 0.0));
@@ -267,13 +288,16 @@ const shaders = Shaders.create({
         }
         return xyOnImagePlane;
       }
+
+
       void main()
       {
-        vec2 temp_uv = uv;
-        temp_uv.x = (temp_uv.x * float(width) / float(height)) - 0.5;
+        // Display fisheye gridlines if they're turned on
         if (gridLines == GRIDLINES_ON && outputProjection == FISHEYE)
         {
-          if (abs(distance(vec2(0.0, 0.0), 2.0 * temp_uv - 1.0) - 1.0) < 0.01)
+          vec2 gridlineUv = uv;
+          gridlineUv.x = (gridlineUv.x * float(width) / float(height)) - 0.5;
+          if (abs(distance(vec2(0.0, 0.0), 2.0 * gridlineUv - 1.0) - 1.0) < 0.01)
           {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
@@ -288,7 +312,7 @@ const shaders = Shaders.create({
         fishCorrect.yzw -= 1.0;
         float lineCount = 0.0;
         // Level Of Detail: how fast should this run?
-        // Set LOD to 0 to run fast, set to two to blur the image, reducing jagged edges
+        // Set LOD to 0 to run fast, set to 2 to blur the image, reducing jagged edges
         const int LOD = 1;
         //TODO Make Antialiasing a little smarter than this.
         for(int i = -LOD; i <= LOD; i++)
@@ -296,13 +320,8 @@ const shaders = Shaders.create({
           for(int j = -LOD; j <= LOD; j++)
           {
             isTransparent = false;
-
-            
             vec2 uv_aa = uv + vec2(i, j)/vec2(width, height);
 
-            
-            // vec2 newDimensions = vec2(cropRight-1.0 - cropLeft-1.0, cropTop-1.0 - cropBottom-1.0)
-            // uv_aa = uv_aa
             // Given some pixel (uv), find the latitude and longitude of that pixel
             vec2 latLon;
             if (outputProjection == EQUI)
