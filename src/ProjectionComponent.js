@@ -123,38 +123,40 @@ const shaders = Shaders.create({
         vec2 pos = 2.0 * local_uv - 1.0;
         vec3 point;
         float faceDistance = fovOut / 3.0;
+        // Remove overlap in the image.
+        float verticalCorrection = 2.0/3.0;
         // Top left face
         if (local_uv.x <= leftBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(2.0/3.0, -0.5);
-          point = vec3(-faceDistance, pos.x, pos.y);
+          point = vec3(-faceDistance, pos.x, verticalCorrection*pos.y);
         }
         // Top Middle Face
         if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(0.0, -0.5);
-          point = vec3(pos.x, faceDistance, pos.y);
+          point = vec3(pos.x, faceDistance, verticalCorrection*pos.y);
         }
         // Top Right Face
         if (rightBoundary < local_uv.x && verticalBoundary <= local_uv.y) {
           pos += vec2(-2.0/3.0, -0.5);
-          point = vec3(faceDistance, -pos.x, pos.y);
+          point = vec3(faceDistance, -pos.x, verticalCorrection*pos.y);
 
         }
         // Bottom left face
         if (local_uv.x <= leftBoundary && local_uv.y < verticalBoundary) {
           pos += vec2(2.0/3.0, 0.5);
-          point = vec3(-pos.y, -pos.x, faceDistance);
+          point = vec3(-pos.y*verticalCorrection, -pos.x, faceDistance);
 
         }
         // Bottom Middle Face
         if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary * 2.0 && local_uv.y < verticalBoundary) {
           pos += vec2(0.0, 0.5);
-          point = vec3(-pos.y, -faceDistance, -pos.x);
+          point = vec3(-pos.y*verticalCorrection, -faceDistance, -pos.x);
 
         }
         // Bottom Right Face
         if (rightBoundary < local_uv.x && local_uv.y < verticalBoundary) {
           pos += vec2(-2.0/3.0, 0.0);
-          point = vec3(-pos.y, pos.x, -faceDistance);
+          point = vec3(-pos.y*verticalCorrection, pos.x, -faceDistance);
 
         }
         return pointToLatLon(point);
