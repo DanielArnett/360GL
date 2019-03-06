@@ -21,7 +21,7 @@ const shaders = Shaders.create({
       const int EQUI = 0;
       const int FISHEYE = 1;
       const int FLAT = 2;
-      const int SPHERE = 3;
+      const int CUBEMAP = 3;
       const int GRIDLINES_OFF = 0;
       const int GRIDLINES_ON = 1;
 
@@ -114,11 +114,50 @@ const shaders = Shaders.create({
         return latLon;
       }
 
-      vec2 sphericalUvToLatLon(vec2 local_uv)
+      vec2 cubemapUvToLatLon(vec2 local_uv)
       {
-          // Return a isTransparent pixel
-          isTransparent = true;
-          return SET_TO_TRANSPARENT;
+        float verticalBoundary = 0.5;
+        float leftBoundary  = 1.0/3.0;
+        float rightBoundary = 2.0/3.0;
+        // Position of the source pixel in uv coordinates in the range [-1,1]
+        vec2 pos = 2.0 * local_uv - 1.0;
+        vec3 point;
+        float faceDistance = PI/8.0;
+        // Top left face
+        if (local_uv.x <= leftBoundary && verticalBoundary <= local_uv.y) {
+          pos += vec2(2.0/3.0, -0.5);
+          point = vec3(-faceDistance, pos.x, pos.y);
+        }
+        // Top Middle Face
+        if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && verticalBoundary <= local_uv.y) {
+          pos += vec2(0.0, -0.5);
+          point = vec3(pos.x, faceDistance, pos.y);
+        }
+        // Top Right Face
+        if (rightBoundary < local_uv.x && verticalBoundary <= local_uv.y) {
+          pos += vec2(-2.0/3.0, -0.5);
+          point = vec3(faceDistance, pos.x, pos.y);
+
+        }
+        // Bottom left face
+        if (local_uv.x <= leftBoundary && local_uv.y < verticalBoundary) {
+          pos += vec2(2.0/3.0, 0.5);
+          point = vec3(pos.x, pos.y, faceDistance);
+
+        }
+        // Bottom Middle Face
+        if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary * 2.0 && local_uv.y < verticalBoundary) {
+          pos += vec2(0.0, 0.5);
+          point = vec3(pos.x, -faceDistance, pos.y);
+
+        }
+        // Bottom Right Face
+        if (rightBoundary < local_uv.x && local_uv.y < verticalBoundary) {
+          pos += vec2(-2.0/3.0, 0.0);
+          point = vec3(pos.x, pos.y, -faceDistance);
+
+        }
+        return pointToLatLon(point);
       }
       
       vec2 flatImageUvToLatLon(vec2 local_uv, float fovOutput)
@@ -273,8 +312,8 @@ const shaders = Shaders.create({
             }
             else if (outputProjection == FLAT)
               latLon = flatImageUvToLatLon(uv_aa, fovOutput);
-            else if (outputProjection == SPHERE)
-              latLon = sphericalUvToLatLon(uv_aa);
+            else if (outputProjection == CUBEMAP)
+              latLon = cubemapUvToLatLon(uv_aa);
             // If a pixel is out of bounds, set it to be transparent
             if (isTransparent)
             {

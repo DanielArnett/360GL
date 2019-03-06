@@ -203,7 +203,7 @@ class App extends Component {
             <MenuItem value={0}>Equirectangular</MenuItem>
             <MenuItem value={1}>Fisheye</MenuItem>
             <MenuItem value={2}>Rectilinear</MenuItem>
-            {/*<MenuItem value={3}>Sphere</MenuItem>*/}
+            <MenuItem value={3}>CubeMap</MenuItem>
           </Select>
         
         </div>
