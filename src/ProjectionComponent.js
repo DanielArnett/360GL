@@ -119,9 +119,10 @@ const shaders = Shaders.create({
           isTransparent = true;
           return SET_TO_TRANSPARENT;
         }
-        float theta = atan(r,0.0);
+        float theta = atan(r, 1.0);
+        r = tan(theta/fovOutput);
         vec2 latLon;
-        latLon.x = (1.0 - r)*PI/2.0;
+        latLon.x = (1.0 - r) * (PI/2.0);
         // Calculate longitude
         latLon.y = PI + atan(-pos.x, pos.y);
           
