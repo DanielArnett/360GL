@@ -144,6 +144,7 @@ const shaders = Shaders.create({
         vec2 pos = (2.0 * local_uv) - 1.0;
         vec3 point;
         float faceDistance = fovOut / 3.0;
+        bool equiAngularCubemap = true;
         // Remove overlap in the image.
         float verticalCorrection = 2.0/3.0;
         // The faces of the cubemap. To explain I'll define the following:
@@ -156,39 +157,45 @@ const shaders = Shaders.create({
         // Top left face in output image
         if (local_uv.x <= leftBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(2.0/3.0, -0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Left" face of cube
           point = vec3(-faceDistance, pos.x, verticalCorrection*pos.y);
         }
         // Top Middle Face in output image
-        if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && verticalBoundary <= local_uv.y) {
+        else if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && verticalBoundary <= local_uv.y) {
           pos += vec2(0.0, -0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Front" face of cube 
           point = vec3(pos.x, faceDistance, verticalCorrection*pos.y);
         }
         // Top Right Face in output image
-        if (rightBoundary < local_uv.x && verticalBoundary <= local_uv.y) {
+        else if (rightBoundary < local_uv.x && verticalBoundary <= local_uv.y) {
           pos += vec2(-2.0/3.0, -0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Right" face of cube
           point = vec3(faceDistance, -pos.x, verticalCorrection*pos.y);
 
         }
         // Bottom left face in output image
-        if (local_uv.x <= leftBoundary && local_uv.y < verticalBoundary) {
+        else if (local_uv.x <= leftBoundary && local_uv.y < verticalBoundary) {
           pos += vec2(2.0/3.0, 0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Top" face of cube
           point = vec3(-pos.y*verticalCorrection, -pos.x, faceDistance);
 
         }
         // Bottom Middle Face in output image
-        if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary * 2.0 && local_uv.y < verticalBoundary) {
+        else if (leftBoundary < local_uv.x && local_uv.x <= rightBoundary && local_uv.y < verticalBoundary) {
           pos += vec2(0.0, 0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Back" face of cube
           point = vec3(-pos.y*verticalCorrection, -faceDistance, -pos.x);
 
         }
         // Bottom Right Face in output image
-        if (rightBoundary < local_uv.x && local_uv.y < verticalBoundary) {
-          pos += vec2(-2.0/3.0, 0.0);
+        else if (rightBoundary < local_uv.x && local_uv.y < verticalBoundary) {
+          pos += vec2(-2.0/3.0, 0.5);
+          if(equiAngularCubemap) pos = tan(pos*PI/2.0)/2.0;
           // "Bottom" face of cube
           point = vec3(-pos.y*verticalCorrection, pos.x, -faceDistance);
 

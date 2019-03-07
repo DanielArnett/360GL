@@ -333,7 +333,7 @@ class App extends Component {
             />
         </div>
         <div className='App-Options'>
-            <p>Radial Correction 1: {(this.state.correction1 - 0.5).toFixed(4)} r</p>
+            <p>Radial Correction 1: {(this.state.correction1 - 1).toFixed(4)} r</p>
             <Slider
               value={correction1*50}
               onChange={this.handleCorrection1Change}
