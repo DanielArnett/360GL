@@ -32,7 +32,7 @@ class App extends Component {
     xCenter: 1,
     yCenter: 1,
     inputProjection: 0,
-    outputProjection: 1,
+    outputProjection: 0,
     gridLines: 0,
     pictures: [],
     sourceImage: "earth.jpg", 

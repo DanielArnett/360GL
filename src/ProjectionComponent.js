@@ -84,19 +84,26 @@ const shaders = Shaders.create({
           return vec2(local_uv.y * PI - PI/2.0,
                       local_uv.x * 2.0*PI - PI);
       }
+
+      // Apply radial correction to a 3D point.
       vec3 pointRadialCorrection(vec3 point) 
       {
+        // Rotate the point so that latitude corresponds with the center of the frame.
+        // We could do it without rotation, by reimplementing pointToLatLon
         vec3 rotation = vec3(-PI/2.0, 0.0, 0.0);
-        vec4 fishCorrect = vec4(correction1, correction2, correction3, correction4);
-        // vec4 fishCorrect = vec4(1.0, 1.0, 1.0, 1.0);
-        fishCorrect.xyzw -= 1.0;
-        // fishCorrect = vec4(-0.04159451814953455, 0.0011674465122719676, -0.004013409283689642, 0.0005224649574205935);
         point = rotatePoint(point, rotation);
+        // Get the calibration parameters
+        vec4 fishCorrect = vec4(correction1, correction2, correction3, correction4);
+        fishCorrect.xyzw -= 1.0;
+        // Get the longitude
         vec2 latLon = pointToLatLon(point);
+        // Get the radius of the point in the xy plane
         float r = distance(point.xy, vec2(0.0, 0.0));
+        // Apply the calibration parameters
         r += r * (fishCorrect.x + r * (fishCorrect.y + r * (fishCorrect.z + r * fishCorrect.w)));
         point.x = r * sin(latLon.y);
         point.y = r * cos(latLon.y);
+        // Make sure the point is back on the unit sphere
         point = normalize(point);
         return rotatePoint(point, -rotation);
       }
