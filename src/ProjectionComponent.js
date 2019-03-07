@@ -349,8 +349,8 @@ const shaders = Shaders.create({
             // X, Y, Z translation inputs from the user.
             vec3 translation = 5.0*(vec3(x, y, z) - 1.0); 
             // Rotate the point based on the user input in radians
-            point = rotatePoint(point, InputRotation.rgb * PI);
             point.xyz += translation;
+            point = rotatePoint(point, InputRotation.rgb * PI);
             if (distance(vec3(0.0, 0.0, 0.0), translation) > 1.0 && distance(vec3(0.0, 0.0, 0.0), point) > distance(vec3(0.0, 0.0, 0.0), translation))
             {
               isTransparent = true;
