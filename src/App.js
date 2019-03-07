@@ -32,7 +32,7 @@ class App extends Component {
     xCenter: 1,
     yCenter: 1,
     inputProjection: 0,
-    outputProjection: 0,
+    outputProjection: 1,
     gridLines: 0,
     pictures: [],
     sourceImage: "earth.jpg", 
@@ -333,7 +333,7 @@ class App extends Component {
             />
         </div>
         <div className='App-Options'>
-            <p>Fisheye Correction 1: {(this.state.correction1 - 0.5).toFixed(4)} r</p>
+            <p>Radial Correction 1: {(this.state.correction1 - 0.5).toFixed(4)} r</p>
             <Slider
               value={correction1*50}
               onChange={this.handleCorrection1Change}
@@ -341,7 +341,7 @@ class App extends Component {
         </div>
         
         <div className='App-Options'>
-            <p>Fisheye Correction 2: {(this.state.correction2 - 1).toFixed(4)} r^2</p>
+            <p>Radial Correction 2: {(this.state.correction2 - 1).toFixed(4)} r^2</p>
             <Slider
               value={correction2*50}
               onChange={this.handleCorrection2Change}
@@ -349,7 +349,7 @@ class App extends Component {
         </div>
         
         <div className='App-Options'>
-            <p>Fisheye Correction 3: {(this.state.correction3 - 1).toFixed(4)} r^3</p>
+            <p>Radial Correction 3: {(this.state.correction3 - 1).toFixed(4)} r^3</p>
             <Slider
               value={correction3*50}
               onChange={this.handleCorrection3Change}
@@ -357,7 +357,7 @@ class App extends Component {
         </div>
         
         <div className='App-Options'>
-            <p>Fisheye Correction 4: {(this.state.correction4 - 1).toFixed(4)} r^4</p>
+            <p>Radial Correction 4: {(this.state.correction4 - 1).toFixed(4)} r^4</p>
             <Slider
               value={correction4*50}
               onChange={this.handleCorrection4Change}

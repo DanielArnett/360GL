@@ -84,10 +84,26 @@ const shaders = Shaders.create({
           return vec2(local_uv.y * PI - PI/2.0,
                       local_uv.x * 2.0*PI - PI);
       }
-
+      vec3 pointRadialCorrection(vec3 point) 
+      {
+        vec3 rotation = vec3(-PI/2.0, 0.0, 0.0);
+        vec4 fishCorrect = vec4(correction1, correction2, correction3, correction4);
+        // vec4 fishCorrect = vec4(1.0, 1.0, 1.0, 1.0);
+        fishCorrect.xyzw -= 1.0;
+        // fishCorrect = vec4(-0.04159451814953455, 0.0011674465122719676, -0.004013409283689642, 0.0005224649574205935);
+        point = rotatePoint(point, rotation);
+        vec2 latLon = pointToLatLon(point);
+        float r = distance(point.xy, vec2(0.0, 0.0));
+        r += r * (fishCorrect.x + r * (fishCorrect.y + r * (fishCorrect.z + r * fishCorrect.w)));
+        point.x = r * sin(latLon.y);
+        point.y = r * cos(latLon.y);
+        point = normalize(point);
+        return rotatePoint(point, -rotation);
+      }
       // Convert  pixel coordinates from an Fisheye image into latitude/longitude coordinates.
       vec2 fisheyeUvToLatLon(vec2 local_uv, float fovOutput)
       {
+        
         vec2 pos = 2.0 * local_uv - 1.0;
         // The distance from the source pixel to the center of the image
         float r = distance(vec2(0.0,0.0),pos.xy);
@@ -96,10 +112,7 @@ const shaders = Shaders.create({
           isTransparent = true;
           return SET_TO_TRANSPARENT;
         }
-        float theta = atan(r,1.0);
-        // phi is the angle of r on the unit circle. See polar coordinates for more details
-        float phi = atan(pos.x,-pos.y);
-        r = tan(theta/fovOutput);
+        float theta = atan(r,0.0);
         vec2 latLon;
         latLon.x = (1.0 - r)*PI/2.0;
         // Calculate longitude
@@ -228,12 +241,7 @@ const shaders = Shaders.create({
         float theta = atan(distance(vec2(0.0,0.0),point.xy),point.z);
         // The distance from the source pixel to the center of the image
         float r = (2.0/PI)*(theta/fovInput);
-        if (FISHEYE_RADIAL_CORRECTION)
-        {
-          // Do radial correction. 
-          // Source: http://paulbourke.net/dome/fisheyecorrect/
-          r *= 2.0 * (fishCorrect.x + theta * (fishCorrect.y + theta * (fishCorrect.z + theta * fishCorrect.w)));
-        }
+        
 
         // phi is the angle of r on the unit circle. See polar coordinates for more details
         float phi = atan(-point.y, point.x);
@@ -308,8 +316,8 @@ const shaders = Shaders.create({
         vec4 centerFragColor = vec4(0.0, 0.0, 0.0, 0.0);
         float fovInput = fovIn;
         float fovOutput = fovOut;
-        vec4 fishCorrect = vec4(correction1-0.5, correction2, correction3, correction4);
-        fishCorrect.yzw -= 1.0;
+        vec4 fishCorrect = vec4(correction1, correction2, correction3, correction4);
+        fishCorrect.xyzw -= 1.0;
         float lineCount = 0.0;
         // Level Of Detail: how fast should this run?
         // Set LOD to 0 to run fast, set to 2 to blur the image, reducing jagged edges
@@ -346,6 +354,7 @@ const shaders = Shaders.create({
               // Y increases from back to front [-1 to 1]
               // Z increases from bottom to top [-1 to 1]
             vec3 point = latLonToPoint(latLon);
+            point = pointRadialCorrection(point);
             // X, Y, Z translation inputs from the user.
             vec3 translation = 5.0*(vec3(x, y, z) - 1.0); 
             // Rotate the point based on the user input in radians
